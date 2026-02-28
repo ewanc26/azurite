@@ -9,9 +9,14 @@ import SwiftUI
 
 @main
 struct fluxApp: App {
+
+    @State private var auth = AuthViewModel()
+
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environment(auth)
         }
+        .windowResizability(.contentMinSize)
     }
 }
