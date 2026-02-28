@@ -17,8 +17,8 @@ struct AppView: View {
     @State private var selection: SidebarItem? = .following
     @State private var unreadCount: Int = 0
     @State private var currentUser: AppBskyLexicon.Actor.ProfileViewDetailedDefinition?
+    @State private var sessionDID: String?
 
-    // Poll for unread notifications every 60 seconds
     private let notificationTimer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
 
     var body: some View {
@@ -54,12 +54,20 @@ struct AppView: View {
         switch selection {
         case .following, .none:
             FeedView(atProto: atProto)
+
         case .notifications:
-            NotificationsView()
+            NotificationsView(atProto: atProto)
+
         case .search:
-            SearchView()
+            SearchView(atProto: atProto)
+
         case .profile:
-            ProfileView()
+            if let did = sessionDID {
+                ProfileView(atProto: atProto, actorDID: did)
+            } else {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
         }
     }
 
@@ -67,13 +75,14 @@ struct AppView: View {
 
     private func loadInitialData() async {
         await withTaskGroup(of: Void.self) { group in
-            group.addTask { await refreshUnreadCount() }
             group.addTask { await loadCurrentUser() }
+            group.addTask { await refreshUnreadCount() }
         }
     }
 
     private func loadCurrentUser() async {
         guard let session = try? await atProto.getUserSession() else { return }
+        sessionDID = session.sessionDID
         currentUser = try? await atProto.getProfile(for: session.sessionDID)
     }
 
