@@ -22,8 +22,7 @@ struct ContentView: View {
                     .frame(minWidth: 420, minHeight: 500)
 
             case .authenticated(let atProto):
-                FeedView(atProto: atProto)
-                    .frame(minWidth: 600, minHeight: 500)
+                AppView(atProto: atProto)
             }
         }
     }

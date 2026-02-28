@@ -18,5 +18,6 @@ struct fluxApp: App {
                 .environment(auth)
         }
         .windowResizability(.contentMinSize)
+        .defaultSize(width: 900, height: 650)
     }
 }
