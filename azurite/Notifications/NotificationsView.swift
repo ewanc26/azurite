@@ -19,49 +19,54 @@ struct NotificationsView: View {
     }
 
     var body: some View {
-        Group {
-            switch vm.state {
-            case .idle, 
-                    .loading where vm.notifications.isEmpty:
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            case .error(let message):
-                ContentUnavailableView(
-                    "Couldn't load notifications",
-                    systemImage: "exclamationmark.triangle",
-                    description: Text(message)
-                )
-            default:
-                notificationList
+        NavigationStack {
+            Group {
+                switch vm.state {
+                case .idle:
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                case .loading where vm.notifications.isEmpty:
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                case .error(let message):
+                    ContentUnavailableView(
+                        "Couldn't load notifications",
+                        systemImage: "exclamationmark.triangle",
+                        description: Text(message)
+                    )
+                default:
+                    notificationList
+                }
             }
+            .navigationTitle("Notifications")
+            .appNavigationDestinations(atProto: atProto)
+            .task { await vm.refresh() }
+            .refreshable { await vm.refresh() }
         }
-        .navigationTitle("Notifications")
-        .task { await vm.refresh() }
-        .refreshable { await vm.refresh() }
     }
 
     // MARK: - List
 
     private var notificationList: some View {
-        ScrollView {
-            LazyVStack(spacing: 0) {
-                ForEach(vm.notifications, id: \.uri) { notification in
-                    NotificationRowView(notification: notification)
-                    Divider().padding(.leading, 66)
-                }
+        List {
+            ForEach(vm.notifications, id: \.uri) { notification in
+                NotificationRowView(notification: notification, atProto: atProto)
+                    .listRowInsets(EdgeInsets())
+                    .listRowSeparator(.hidden)
+                    .task {
+                        if notification.uri == vm.notifications.last?.uri {
+                            await vm.loadNextPage()
+                        }
+                    }
+            }
 
-                // Infinite scroll trigger
-                if let last = vm.notifications.last {
-                    Color.clear
-                        .frame(height: 1)
-                        .id("bottom-\(last.uri)")
-                        .task { await vm.loadNextPage() }
-                }
-
-                if vm.isLoadingMore {
-                    ProgressView().padding()
-                }
+            if vm.isLoadingMore {
+                HStack { ProgressView() }
+                    .frame(maxWidth: .infinity)
+                    .listRowSeparator(.hidden)
+                    .padding()
             }
         }
+        .listStyle(.plain)
     }
 }

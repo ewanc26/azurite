@@ -57,6 +57,7 @@ struct AppView: View {
 
         case .notifications:
             NotificationsView(atProto: atProto)
+                .task { unreadCount = 0 }
 
         case .search:
             SearchView(atProto: atProto)

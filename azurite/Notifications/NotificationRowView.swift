@@ -11,17 +11,62 @@ import ATProtoKit
 struct NotificationRowView: View {
 
     let notification: AppBskyLexicon.Notification.Notification
+    let atProto: ATProtoKit
 
     var body: some View {
+        Group {
+            if let destination = navigationDestination {
+                NavigationLink(value: destination) {
+                    rowContent
+                }
+                .buttonStyle(.plain)
+            } else {
+                rowContent
+            }
+        }
+    }
+
+    // MARK: - Navigation destination
+
+    private var navigationDestination: AppDestination? {
+        switch notification.reason {
+        case .like, .repost, .likeViaRepost, .repostViaRepost:
+            // Go to the post that was liked/reposted
+            if let subjectURI = notification.reasonSubjectURI {
+                return .thread(postURI: subjectURI)
+            }
+            return nil
+
+        case .reply, .mention, .quote:
+            // Go to the reply/mention/quote itself
+            return .thread(postURI: notification.uri)
+
+        case .follow, .starterpackjoined, .verified, .unverified, .subscribedPost:
+            // Go to the author's profile
+            return .profile(actorDID: notification.author.actorDID)
+
+        case .unknown:
+            return nil
+        }
+    }
+
+    // MARK: - Row content
+
+    private var rowContent: some View {
         HStack(alignment: .top, spacing: 12) {
             reasonBadge
                 .frame(width: 38, height: 38)
 
             VStack(alignment: .leading, spacing: 6) {
                 HStack(alignment: .top) {
-                    AvatarView(url: notification.author.avatarImageURL)
-                        .frame(width: 34, height: 34)
+                    NavigationLink(value: AppDestination.profile(actorDID: notification.author.actorDID)) {
+                        AvatarView(url: notification.author.avatarImageURL)
+                            .frame(width: 34, height: 34)
+                    }
+                    .buttonStyle(.plain)
+
                     Spacer()
+
                     Text(notification.indexedAt, style: .relative)
                         .font(.caption)
                         .foregroundStyle(.tertiary)
@@ -45,6 +90,7 @@ struct NotificationRowView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .background(notification.isRead ? Color.clear : Color.accentColor.opacity(0.05))
+        .contentShape(Rectangle())
     }
 
     // MARK: - Computed helpers
@@ -71,7 +117,7 @@ struct NotificationRowView: View {
         }
     }
 
-    /// Show the post text when the notification itself contains a post record (replies, mentions, quotes).
+    /// Show the post text for notifications where the record is a post (replies, mentions, quotes).
     private var postExcerpt: String? {
         switch notification.reason {
         case .reply, .mention, .quote:
@@ -97,16 +143,16 @@ struct NotificationRowView: View {
         switch notification.reason {
         case .like:              return ("heart.fill",            .pink)
         case .likeViaRepost:     return ("heart.fill",            .pink)
-        case .repost:            return ("arrow.2.squarepath",    .green)
-        case .repostViaRepost:   return ("arrow.2.squarepath",    .green)
-        case .follow:            return ("person.badge.plus",     .blue)
-        case .mention:           return ("at",                    .purple)
-        case .reply:             return ("bubble.left.fill",      .blue)
-        case .quote:             return ("quote.bubble.fill",     .indigo)
+        case .repost:            return ("arrow.2.squarepath",    .mint)
+        case .repostViaRepost:   return ("arrow.2.squarepath",    .mint)
+        case .follow:            return ("person.badge.plus",     .green)
+        case .mention:           return ("at",                    .green)
+        case .reply:             return ("bubble.left.fill",      .green)
+        case .quote:             return ("quote.bubble.fill",     .teal)
         case .starterpackjoined: return ("person.2.fill",         .orange)
         case .verified:          return ("checkmark.seal.fill",   .teal)
         case .unverified:        return ("xmark.seal.fill",       .gray)
-        case .subscribedPost:    return ("bell.fill",             .yellow)
+        case .subscribedPost:    return ("bell.fill",             .green)
         case .unknown:           return ("questionmark.circle",   .gray)
         }
     }

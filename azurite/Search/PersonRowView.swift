@@ -11,34 +11,46 @@ import ATProtoKit
 struct PersonRowView: View {
 
     let person: AppBskyLexicon.Actor.ProfileViewDefinition
+    let atProto: ATProtoKit
 
     var body: some View {
-        HStack(spacing: 12) {
-            AvatarView(url: person.avatarImageURL)
-                .frame(width: 44, height: 44)
+        NavigationLink(value: AppDestination.profile(actorDID: person.actorDID)) {
+            HStack(spacing: 12) {
+                AvatarView(url: person.avatarImageURL, size: 44)
 
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 5) {
-                    Text(person.displayName ?? person.actorHandle)
-                        .fontWeight(.semibold)
-                    Text("@\(person.actorHandle)")
-                        .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 5) {
+                        Text(person.displayName ?? person.actorHandle)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.primary)
+                        Text("@\(person.actorHandle)")
+                            .foregroundStyle(.secondary)
+                    }
+                    .font(.subheadline)
+                    .lineLimit(1)
+
+                    if let bio = person.description, !bio.isEmpty {
+                        Text(bio)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
                 }
-                .font(.subheadline)
-                .lineLimit(1)
 
-                if let bio = person.description, !bio.isEmpty {
-                    Text(bio)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
+                Spacer(minLength: 0)
+
+                if person.viewer != nil {
+                    FollowButton(
+                        actorDID: person.actorDID,
+                        followingURI: person.viewer?.followingURI,
+                        atProto: atProto
+                    )
+                    .simultaneousGesture(TapGesture()) // prevent NavigationLink firing
                 }
             }
-
-            Spacer(minLength: 0)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .contentShape(Rectangle())
+        .buttonStyle(.plain)
     }
 }

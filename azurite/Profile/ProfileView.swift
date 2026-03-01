@@ -22,67 +22,60 @@ struct ProfileView: View {
     }
 
     var body: some View {
-        Group {
-            if vm.isLoading && vm.profile == nil {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let error = vm.error, vm.profile == nil {
-                ContentUnavailableView(
-                    "Couldn't load profile",
-                    systemImage: "person.crop.circle.badge.exclamationmark",
-                    description: Text(error)
-                )
-                .toolbar {
-                    ToolbarItem {
-                        Button("Retry") { Task { await vm.load() } }
+        NavigationStack {
+            Group {
+                if vm.isLoading && vm.profile == nil {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let error = vm.error, vm.profile == nil {
+                    ContentUnavailableView(
+                        "Couldn't load profile",
+                        systemImage: "person.crop.circle.badge.exclamationmark",
+                        description: Text(error)
+                    )
+                    .toolbar {
+                        ToolbarItem { Button("Retry") { Task { await vm.load() } } }
                     }
+                } else if let profile = vm.profile {
+                    profileList(profile: profile)
                 }
-            } else if let profile = vm.profile {
-                profileBody(profile: profile)
             }
+            .navigationTitle("Profile")
+            .appNavigationDestinations(atProto: atProto)
+            .task { await vm.load() }
         }
-        .navigationTitle("Profile")
-        .task { await vm.load() }
-        .refreshable { await vm.load() }
     }
 
-    // MARK: - Body
+    // MARK: - List body
 
-    private func profileBody(profile: AppBskyLexicon.Actor.ProfileViewDetailedDefinition) -> some View {
-        ScrollView {
-            LazyVStack(spacing: 0, pinnedViews: []) {
+    private func profileList(profile: AppBskyLexicon.Actor.ProfileViewDetailedDefinition) -> some View {
+        List {
+            ProfileHeaderView(profile: profile, atProto: atProto, isOwnProfile: vm.isOwnProfile)
 
-                ProfileHeaderView(profile: profile)
-
-                Divider()
-
-                if vm.feed.isEmpty && !vm.isLoading {
-                    ContentUnavailableView(
-                        "No posts yet",
-                        systemImage: "tray"
-                    )
-                    .padding(.top, 40)
-                } else {
-                    ForEach(Array(vm.feed.enumerated()), id: \.element.post.uri) { index, item in
-                        PostRowView(item: item)
-
-                        if index < vm.feed.count - 1 {
-                            Divider().padding(.leading, 72)
+            if vm.feed.isEmpty && !vm.isLoading {
+                ContentUnavailableView("No posts yet", systemImage: "tray")
+                    .listRowSeparator(.hidden)
+            } else {
+                ForEach(Array(vm.feed.enumerated()), id: \.element.post.uri) { index, item in
+                    PostRowView(item: item, atProto: atProto)
+                        .listRowInsets(EdgeInsets())
+                        .listRowSeparator(.hidden)
+                        .task {
+                            if index == vm.feed.count - 10 {
+                                await vm.loadMoreFeed()
+                            }
                         }
+                }
 
-                        // Load-more trigger 10 posts from end
-                        if index == vm.feed.count - 10 {
-                            Color.clear
-                                .frame(height: 1)
-                                .task { await vm.loadMoreFeed() }
-                        }
-                    }
-
-                    if vm.isLoadingMore {
-                        ProgressView().padding()
-                    }
+                if vm.isLoadingMore {
+                    HStack { ProgressView() }
+                        .frame(maxWidth: .infinity)
+                        .listRowSeparator(.hidden)
+                        .padding()
                 }
             }
         }
+        .listStyle(.plain)
+        .refreshable { await vm.load() }
     }
 }

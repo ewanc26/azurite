@@ -34,9 +34,30 @@ final class AuthViewModel {
         return nil
     }
 
+    // MARK: - Init
+
+    init() {
+        // Attempt to restore a previous session from the Keychain on launch.
+        Task {
+            await restoreSessionIfPossible()
+        }
+    }
+
+    // MARK: - Session restoration
+
+    private func restoreSessionIfPossible() async {
+        guard let credentials = KeychainService.loadCredentials() else { return }
+        await login(handle: credentials.handle, appPassword: credentials.appPassword, saveToKeychain: false)
+    }
+
     // MARK: - Login
 
-    func login(handle: String, appPassword: String) async {
+    /// Signs in with the given handle and app password.
+    /// - Parameters:
+    ///   - handle: The user's AT Protocol handle (e.g. `alice.bsky.social`).
+    ///   - appPassword: The app password generated on bsky.app.
+    ///   - saveToKeychain: Whether to persist the credentials after a successful login. Defaults to `true`.
+    func login(handle: String, appPassword: String, saveToKeychain: Bool = true) async {
         // Step 1 — resolve the PDS for this handle
         state = .resolvingPDS
 
@@ -57,14 +78,24 @@ final class AuthViewModel {
             try await config.authenticate(with: handle, password: appPassword)
             let kit = await ATProtoKit(sessionConfiguration: config)
             state = .authenticated(kit)
+
+            if saveToKeychain {
+                KeychainService.saveCredentials(handle: handle, appPassword: appPassword)
+            }
         } catch {
             state = .failed(error.localizedDescription)
+            // If restoration failed, clear any stale credentials so the user
+            // isn't stuck in a silent failure loop.
+            if !saveToKeychain {
+                KeychainService.deleteCredentials()
+            }
         }
     }
 
     // MARK: - Logout
 
     func logout() {
+        KeychainService.deleteCredentials()
         state = .unauthenticated
     }
 }
