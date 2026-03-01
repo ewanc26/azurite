@@ -10,10 +10,12 @@ import ATProtoKit
 
 struct FeedView: View {
 
+    let atProto: ATProtoKit
     @State private var viewModel: FeedViewModel
-    @Environment(AuthViewModel.self) private var auth
+    @State private var showingCompose = false
 
     init(atProto: ATProtoKit) {
+        self.atProto = atProto
         _viewModel = State(initialValue: FeedViewModel(atProto: atProto))
     }
 
@@ -21,11 +23,23 @@ struct FeedView: View {
         NavigationStack {
             Group {
                 if viewModel.posts.isEmpty && viewModel.isLoading {
-                    loadingView
+                    ProgressView("Loading feed…")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if viewModel.posts.isEmpty, case .failed(let msg) = viewModel.loadState {
-                    errorView(message: msg)
+                    ContentUnavailableView(
+                        "Failed to load feed",
+                        systemImage: "exclamationmark.triangle",
+                        description: Text(msg)
+                    )
+                    .toolbar {
+                        ToolbarItem { Button("Try Again") { Task { await viewModel.refresh() } } }
+                    }
                 } else if viewModel.posts.isEmpty {
-                    emptyView
+                    ContentUnavailableView(
+                        "No posts yet",
+                        systemImage: "text.bubble",
+                        description: Text("Follow some accounts to see posts here.")
+                    )
                 } else {
                     feedList
                 }
@@ -33,92 +47,57 @@ struct FeedView: View {
             .navigationTitle("Following")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Button("Sign Out", role: .destructive) {
-                        auth.logout()
+                    Button { showingCompose = true } label: {
+                        Label("New Post", systemImage: "square.and.pencil")
                     }
-                    .foregroundStyle(.secondary)
+                    .help("Compose a post")
+                }
+            }
+            .appNavigationDestinations(atProto: atProto)
+            .sheet(isPresented: $showingCompose) {
+                ComposeView(atProto: atProto) {
+                    Task {
+                        try? await Task.sleep(nanoseconds: 1_000_000_000)
+                        await viewModel.refresh()
+                    }
                 }
             }
         }
-        .task {
-            await viewModel.refresh()
-        }
+        .task { await viewModel.refresh() }
     }
 
-    // MARK: - Subviews
+    // MARK: - Feed list
 
     private var feedList: some View {
-        ScrollView {
-            LazyVStack(spacing: 0) {
-                ForEach(viewModel.posts.indices, id: \.self) { index in
-                    let item = viewModel.posts[index]
-                    PostRowView(item: item)
-                        .task {
-                            // Trigger pagination when approaching the end
-                            if index == viewModel.posts.count - 10 {
-                                await viewModel.loadNextPage()
-                            }
+        List {
+            ForEach(viewModel.posts.indices, id: \.self) { index in
+                PostRowView(item: viewModel.posts[index], atProto: atProto)
+                    .listRowInsets(EdgeInsets())
+                    .listRowSeparator(.hidden)
+                    .task {
+                        if index == viewModel.posts.count - 10 {
+                            await viewModel.loadNextPage()
                         }
-                    Divider()
-                }
+                    }
+            }
 
-                if viewModel.isLoading {
-                    ProgressView()
-                        .padding()
-                }
+            if viewModel.isLoading {
+                HStack { ProgressView() }
+                    .frame(maxWidth: .infinity)
+                    .listRowSeparator(.hidden)
+                    .padding()
+            }
 
-                if !viewModel.hasMore {
-                    Text("You're all caught up.")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                        .padding()
-                }
+            if !viewModel.hasMore {
+                Text("You're all caught up.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .frame(maxWidth: .infinity)
+                    .listRowSeparator(.hidden)
+                    .padding()
             }
         }
-        .refreshable {
-            await viewModel.refresh()
-        }
-    }
-
-    private var loadingView: some View {
-        VStack(spacing: 12) {
-            ProgressView()
-            Text("Loading feed…")
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    private func errorView(message: String) -> some View {
-        VStack(spacing: 16) {
-            Image(systemName: "exclamationmark.triangle")
-                .font(.largeTitle)
-                .foregroundStyle(.red)
-            Text("Failed to load feed")
-                .font(.headline)
-            Text(message)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-            Button("Try Again") {
-                Task { await viewModel.refresh() }
-            }
-            .buttonStyle(.bordered)
-        }
-        .padding()
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    private var emptyView: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "text.bubble")
-                .font(.largeTitle)
-                .foregroundStyle(.secondary)
-            Text("No posts yet")
-                .font(.headline)
-            Text("Follow some accounts to see posts here.")
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .listStyle(.plain)
+        .refreshable { await viewModel.refresh() }
     }
 }

@@ -16,8 +16,11 @@ final class ProfileViewModel {
     private(set) var isLoading = false
     private(set) var isLoadingMore = false
     private(set) var error: String? = nil
+    private(set) var sessionDID: String? = nil
     private var feedCursor: String? = nil
     private var hasMoreFeed = true
+
+    var isOwnProfile: Bool { sessionDID != nil && sessionDID == actorDID }
 
     private let atProto: ATProtoKit
     let actorDID: String
@@ -34,6 +37,11 @@ final class ProfileViewModel {
         feedCursor = nil
         hasMoreFeed = true
         error = nil
+
+        // Resolve session DID for own-profile detection
+        if sessionDID == nil {
+            sessionDID = try? await atProto.getUserSession()?.sessionDID
+        }
 
         async let profileTask = atProto.getProfile(for: actorDID)
         async let feedTask    = atProto.getAuthorFeed(

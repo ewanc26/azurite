@@ -21,7 +21,9 @@ struct SidebarView: View {
                     Label {
                         Text(item.title)
                     } icon: {
-                        Image(systemName: selection == item ? item.selectedIcon : item.icon)
+                        let isSelected = selection == item
+                        Image(systemName: isSelected ? item.selectedIcon : item.icon)
+                            .foregroundStyle(isSelected ? Color.bskyBlue : Color.primary)
                     }
                     .badge(item == .notifications && unreadCount > 0 ? unreadCount : 0)
                     .tag(item)
@@ -29,6 +31,7 @@ struct SidebarView: View {
             }
         }
         .listStyle(.sidebar)
+        .tint(Color.bskyBlue)
         .safeAreaInset(edge: .bottom) {
             if let user = currentUser {
                 userFooter(user: user)
@@ -40,8 +43,7 @@ struct SidebarView: View {
 
     private func userFooter(user: AppBskyLexicon.Actor.ProfileViewDetailedDefinition) -> some View {
         HStack(spacing: 10) {
-            AvatarView(url: user.avatarImageURL)
-                .frame(width: 32, height: 32)
+            AvatarView(url: user.avatarImageURL, size: 34)
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(user.displayName ?? user.actorHandle)
@@ -56,8 +58,11 @@ struct SidebarView: View {
 
             Spacer()
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .background(.bar)
+        .overlay(alignment: .top) {
+            Divider()
+        }
     }
 }
