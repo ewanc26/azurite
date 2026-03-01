@@ -1,0 +1,12 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <linearGradient id="sideFacet" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" style="stop-color:#2980b9" />
+    <stop offset="100%" style="stop-color:#1e6ab0" />
+  </linearGradient>
+  <g transform="translate(512, 512)">
+    <path d="M -400,0 L -280,-320 L -200,-220 L -300,0 Z" fill="url(#sideFacet)" />
+    <path d="M -280,-320 L 280,-320 L 200,-220 L -200,-220 Z" fill="#2c82c9" />
+    <path d="M 280,-320 L 400,0 L 300,0 L 200,-220 Z" fill="url(#sideFacet)" />
+    <path d="M 400,0 L 280,320 L 200,220 L 300,0 Z" fill="#21618c" />
+  </g>
+</svg>

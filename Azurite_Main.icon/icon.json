@@ -1,0 +1,37 @@
+{
+  "fill" : {
+    "solid" : "extended-srgb:0.00000,0.78431,0.70196,1.00000"
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "image-name" : "01_pavilion.svg",
+          "name" : "01_pavilion"
+        },
+        {
+          "image-name" : "02_crown.svg",
+          "name" : "02_crown"
+        },
+        {
+          "image-name" : "03_table.svg",
+          "name" : "03_table"
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}
